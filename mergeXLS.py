@@ -5,10 +5,13 @@ import pandas as pd
 
 # Функция для объединения файлов Excel
 def merge_excel_files():
+
+    order = ""
+
     # Выбор нескольких файлов
     file_paths = filedialog.askopenfilenames(
         title="Выберите файлы Excel",
-        filetypes=(("Excel files", "*.xlsx"), ("All Files", "*.*"))
+        filetypes=(("Excel files", "*.xls*"), ("All Files", "*.*"))
     )
 
     if not file_paths:
