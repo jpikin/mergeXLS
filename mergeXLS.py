@@ -35,12 +35,12 @@ def merge_excel_files():
             headers = df.iloc[start_row_idx].values.tolist()
 
             # Проверка наличия нужных колонок
-            required_columns = ["Наименование материала", "Количество в заказе"]
+            required_columns = ["Наименование материала", "Количество в заказе", "Ед. изм."]
             missing_cols = set(required_columns) - set(headers)
             if missing_cols:
                 raise Exception(f"В файле '{path}' не хватает колонок: {missing_cols}")
 
-            # Начинаем брать данные с следующей строки после шапки
+            # Начинаем брать данные со следующей строки после шапки
             useful_data = df.iloc[start_row_idx + 1:]
 
             # Переименовываем колонки согласно заголовкам
@@ -58,7 +58,7 @@ def merge_excel_files():
         merged_df = pd.concat(df_list)
 
         # Суммирование по материалам
-        grouped_df = merged_df.groupby('Наименование материала')['Количество в заказе'].sum().reset_index()
+        grouped_df = merged_df.groupby(['Наименование материала', 'Ед. изм.'])['Количество в заказе'].sum().reset_index()
 
         # Путь для сохранения итогового файла
         output_path = filedialog.asksaveasfilename(
