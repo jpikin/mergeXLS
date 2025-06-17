@@ -1,7 +1,6 @@
 import os
 from tkinter import Tk, filedialog, Button, Label, Text, Scrollbar
 import pandas as pd
-from openpyxl.workbook import Workbook
 
 
 # Функция для объединения файлов Excel
@@ -76,7 +75,7 @@ def merge_excel_files():
             'Количество в заказе'].sum().reset_index()
 
         # Путь для сохранения итогового файла
-        output_path = os.path.join(os.getcwd(), 'Заказ_'+order+'.xlsx')
+        output_path = os.path.join(os.getcwd(), 'Заказ_' + order + '.xlsx')
 
         if output_path:
             # Создаем новый dataframe для записи заказа
@@ -87,7 +86,7 @@ def merge_excel_files():
                 info_df.to_excel(writer, sheet_name='Итоги', index=False, startrow=0)
 
                 # Переносимся ниже и выводим итоговые материалы
-                grouped_df.to_excel(writer, sheet_name='Итоги', index=False, startrow=len(info_df)+2)
+                grouped_df.to_excel(writer, sheet_name='Итоги', index=False, startrow=len(info_df) + 2)
 
             result_text.delete('1.0', 'end')
             result_text.insert('end', f'Файл успешно сохранён в {output_path}')
@@ -105,11 +104,18 @@ def merge_excel_files():
         result_text.insert('end', f'Ошибка: {e}')
 
 
+def sys_message():
+    result_text.delete('1.0', 'end')
+    result_text.insert('end', "Функция еще не работает")
+
+
 root = Tk()
 root.title("Объединение Excel-файлов")
 
 select_button = Button(root, text="Выбрать файлы", command=merge_excel_files)
+select_orders = Button(root, text="Выбрать заказы", command=sys_message)
 select_button.pack(pady=10)
+select_orders.pack(pady=10)
 
 result_label = Label(root, text="Результат:")
 result_label.pack()
