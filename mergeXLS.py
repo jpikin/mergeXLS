@@ -80,7 +80,7 @@ def merge_excel_files():
 
         if output_path:
             # Создаем новый dataframe для записи заказа
-            info_df = pd.DataFrame({'Информация': ['Заказ'], 'Значение': [order]}, index=[0])
+            info_df = pd.DataFrame({'Заказ': [''], order: ['']}, index=[0])
 
             with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
                 # Экспортим информацию о заказе
