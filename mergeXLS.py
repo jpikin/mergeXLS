@@ -61,10 +61,7 @@ def merge_excel_files():
         grouped_df = merged_df.groupby(['Наименование материала', 'Ед. изм.'])['Количество в заказе'].sum().reset_index()
 
         # Путь для сохранения итогового файла
-        output_path = filedialog.asksaveasfilename(
-            defaultextension='.xlsx',
-            title="Сохранить объединённый файл"
-        )
+        output_path = os.path.join(os.getcwd(), 'Заказ.xlsx')
 
         if output_path:
             grouped_df.to_excel(output_path, index=False)
