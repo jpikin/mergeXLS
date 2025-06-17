@@ -1,11 +1,11 @@
 import os
 from tkinter import Tk, filedialog, Button, Label, Text, Scrollbar
 import pandas as pd
+from openpyxl.workbook import Workbook
 
 
 # Функция для объединения файлов Excel
 def merge_excel_files():
-
     order = ""
 
     # Выбор нескольких файлов
@@ -23,6 +23,17 @@ def merge_excel_files():
         # Проход по каждому файлу
         for path in file_paths:
             df = pd.read_excel(path)
+
+            # Поиск строки с "Заказ"
+            for idx, row in df.iterrows():
+                values = row.to_list()
+                if any(cell == 'Заказ' for cell in row):
+                    pos = values.index('Заказ')
+                    if len(values) > pos + 1:
+                        order = values[pos + 1]
+                    else:
+                        order = None
+                    break
 
             # Поиск строки с "Артикул"
             start_row_idx = None
@@ -61,13 +72,23 @@ def merge_excel_files():
         merged_df = pd.concat(df_list)
 
         # Суммирование по материалам
-        grouped_df = merged_df.groupby(['Наименование материала', 'Ед. изм.'])['Количество в заказе'].sum().reset_index()
+        grouped_df = merged_df.groupby(['Наименование материала', 'Ед. изм.'])[
+            'Количество в заказе'].sum().reset_index()
 
         # Путь для сохранения итогового файла
-        output_path = os.path.join(os.getcwd(), 'Заказ.xlsx')
+        output_path = os.path.join(os.getcwd(), 'Заказ_'+order+'.xlsx')
 
         if output_path:
-            grouped_df.to_excel(output_path, index=False)
+            # Создаем новый dataframe для записи заказа
+            info_df = pd.DataFrame({'Информация': ['Заказ'], 'Значение': [order]}, index=[0])
+
+            with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
+                # Экспортим информацию о заказе
+                info_df.to_excel(writer, sheet_name='Итоги', index=False, startrow=0)
+
+                # Переносимся ниже и выводим итоговые материалы
+                grouped_df.to_excel(writer, sheet_name='Итоги', index=False, startrow=len(info_df)+2)
+
             result_text.delete('1.0', 'end')
             result_text.insert('end', f'Файл успешно сохранён в {output_path}')
         else:
@@ -84,15 +105,12 @@ def merge_excel_files():
         result_text.insert('end', f'Ошибка: {e}')
 
 
-# Создание окна приложения
 root = Tk()
 root.title("Объединение Excel-файлов")
 
-# Кнопка выбора файлов
 select_button = Button(root, text="Выбрать файлы", command=merge_excel_files)
 select_button.pack(pady=10)
 
-# Поле вывода результата
 result_label = Label(root, text="Результат:")
 result_label.pack()
 
@@ -103,5 +121,4 @@ result_text = Text(root, yscrollcommand=scrollbar.set, height=10, width=80)
 result_text.pack(fill='both', expand=True)
 scrollbar.config(command=result_text.yview)
 
-# Запуск главного цикла
 root.mainloop()
