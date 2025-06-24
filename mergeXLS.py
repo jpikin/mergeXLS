@@ -1,12 +1,13 @@
 import os
 from tkinter import Tk, filedialog, Button, Label, Text, Scrollbar
 import pandas as pd
+
 pd.set_option('future.no_silent_downcasting', True)
 
 
 # Функция для объединения файлов Excel
 def merge_excel_files():
-    unit = ""
+    units = []
 
     # Выбор нескольких файлов
     file_paths = filedialog.askopenfilenames(
@@ -31,8 +32,10 @@ def merge_excel_files():
                     pos = values.index('Артикул изделия')
                     if len(values) > pos + 1:
                         unit = values[pos + 1]
+                        if unit not in units:
+                            units.append(unit)
                     else:
-                        unit = "_"
+                        continue
                     break
 
             # Поиск строки с "Артикул"
@@ -58,7 +61,7 @@ def merge_excel_files():
             df = pd.read_excel(path)
 
             # Выделяем нужный диапазон данных
-            start_row_idx += 1 # Первая строка данных
+            start_row_idx += 1  # Первая строка данных
             useful_data = df.iloc[start_row_idx:, :].copy(deep=True)  # Полностью скопировали таблицу
 
             # Назначаем названия колонок
@@ -66,9 +69,14 @@ def merge_excel_files():
 
             # Фиксируем пустые значения в колонке "Артикул"
             useful_data["Артикул"] = useful_data["Артикул"].fillna(" ")
+
+            # Заменяем пустые значения в колонке "Количество в заказе" на 0
             temp_col = useful_data["Количество в заказе"].fillna(0)
             result = temp_col.infer_objects(copy=False)
             useful_data["Количество в заказе"] = result
+
+            # Заменяем единицы измерения если ячейка пустая(не удалять, пока не используем)
+            # useful_data["Ед. изм."] = useful_data["Ед. изм."].fillna("н/а")
 
             # Определяем колонки для проверки на пустоту (без учета "Артикул")
             check_columns = [col for col in required_columns if col != "Артикул"]
@@ -94,10 +102,10 @@ def merge_excel_files():
 
         if output_path:
             # Создаем новый dataframe для записи заказа
-            info_df = pd.DataFrame({'Сводная таблица': ['']}, index=[0])
+            info_df = pd.DataFrame({'Сводная таблица': [units]}, index=[0])
 
             with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
-                # Экспортим информацию о заказе
+                # Экспортируем информацию о заказе
                 info_df.to_excel(writer, sheet_name='Итоги', index=False, startrow=0)
 
                 # Переносимся ниже и выводим итоговые материалы
