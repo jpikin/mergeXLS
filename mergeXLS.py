@@ -1,6 +1,9 @@
 import os
 from tkinter import Tk, filedialog, Button, Label, Text, Scrollbar
 import pandas as pd
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill
+from openpyxl.utils.dataframe import dataframe_to_rows
 
 pd.set_option('future.no_silent_downcasting', True)
 
@@ -52,7 +55,7 @@ def merge_excel_files():
             headers = df.iloc[start_row_idx].values.tolist()
 
             # Проверка наличия нужных колонок
-            required_columns = ["Артикул", "Наименование материала", "Количество в заказе", "Ед. изм."]
+            required_columns = ["Артикул", "Наименование материала", "Ед. изм.", "Количество в заказе"]
             missing_cols = set(required_columns) - set(headers)
             if missing_cols:
                 raise Exception(f"В файле '{path}' не хватает колонок: {missing_cols}")
@@ -75,14 +78,14 @@ def merge_excel_files():
             result = temp_col.infer_objects(copy=False)
             useful_data["Количество в заказе"] = result
 
-            # Заменяем единицы измерения если ячейка пустая(не удалять, пока не используем)
-            # useful_data["Ед. изм."] = useful_data["Ед. изм."].fillna("н/а")
+            # Заменяем единицы измерения если ячейка пустая
+            useful_data["Ед. изм."] = useful_data["Ед. изм."].fillna("н/а")
 
             # Определяем колонки для проверки на пустоту (без учета "Артикул")
-            check_columns = [col for col in required_columns if col != "Артикул"]
+            # check_columns = [col for col in required_columns if (col != "Артикул")]
 
             # Исключение строк с пустыми значениями в колонках check_columns
-            useful_data.dropna(how="any", subset=check_columns, inplace=True)
+            # useful_data.dropna(how="any", subset=check_columns, inplace=True)
 
             # Оставляем только требуемые колонки
             useful_data = useful_data[required_columns]
@@ -98,18 +101,39 @@ def merge_excel_files():
             'Количество в заказе'].sum().reset_index()
 
         # Путь для сохранения итогового файла
-        output_path = os.path.join(os.getcwd(), 'Заказ_.xlsx')
+        output_path = os.path.join(os.getcwd(), 'Сводный заказ.xlsx')
+
+        info_df = pd.DataFrame({'Сводная таблица': [units]}, index=[0])
+
+        # Преобразуем итоговый объединенный DataFrame в объекты Excel
+        wb = Workbook()
+        ws = wb.active
 
         if output_path:
-            # Создаем новый dataframe для записи заказа
-            info_df = pd.DataFrame({'Сводная таблица': [units]}, index=[0])
 
+            # Создаем новый dataframe для записи заказа
             with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
                 # Экспортируем информацию о заказе
                 info_df.to_excel(writer, sheet_name='Итоги', index=False, startrow=0)
 
+                worksheet = writer.sheets['Итоги']
                 # Переносимся ниже и выводим итоговые материалы
                 grouped_df.to_excel(writer, sheet_name='Итоги', index=False, startrow=len(info_df) + 2)
+
+                for r in dataframe_to_rows(grouped_df, index=False, header=True):
+                    ws.append(r)
+                start_row = len(info_df) + 2
+                red_fill = PatternFill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')
+                rows_with_data = list(worksheet.iter_rows(min_row=start_row + 1))
+                for i, row in enumerate(rows_with_data):
+                    values_in_row = [cell.value for cell in row]
+                    if 'н/а' in map(str, values_in_row):
+                        for cell in row:
+                            cell.fill = red_fill
+                wb.save(output_path)
+
+
+
 
             result_text.delete('1.0', 'end')
             result_text.insert('end', f'Файл успешно сохранён в {output_path}')
