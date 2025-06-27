@@ -7,6 +7,12 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 
 pd.set_option('future.no_silent_downcasting', True)
 
+list_of_furniture = ['петля', 'направляющие', 'планка', 'заглушка', 'комплект', 'замок']
+list_of_LKM = ['ral', 'ncs', 'отвердитель', 'разбавитель', 'грунт', 'лак', 'эмаль', 'порошковая', 'краска']
+list_of_mirror = ['стекло', 'зеркало']
+list_of_still = ['лист', 'труба']
+list_of_wood = ['лдсп', 'акрил', 'кромка', 'мдф', 'фанера', 'дсп', 'хдф']
+
 
 # Функция для объединения файлов Excel
 def merge_excel_files():
@@ -131,9 +137,6 @@ def merge_excel_files():
                         for cell in row:
                             cell.fill = red_fill
                 wb.save(output_path)
-
-
-
 
             result_text.delete('1.0', 'end')
             result_text.insert('end', f'Файл успешно сохранён в {output_path}')
