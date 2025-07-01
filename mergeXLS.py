@@ -15,7 +15,15 @@ list_of_wood = ['лдсп', 'акрил', 'кромка', 'мдф', 'фанер�
 
 
 # Функция для объединения файлов Excel
+def fill_column(new_units, val):
+
+    if val not in new_units:
+        new_units.append(val)
+    return ' '.join(new_units)
+
+
 def merge_excel_files():
+    global unit
     units = []
 
     # Выбор нескольких файлов
@@ -40,7 +48,10 @@ def merge_excel_files():
                 if any(cell == 'Артикул изделия' for cell in row):
                     pos = values.index('Артикул изделия')
                     if len(values) > pos + 1:
-                        unit = values[pos + 1]
+                        if values[pos + 1]:
+                            unit = values[pos + 1]
+                        else:
+                            unit = " "
                         if unit not in units:
                             units.append(unit)
                     else:
@@ -74,6 +85,7 @@ def merge_excel_files():
             useful_data = df.iloc[start_row_idx:, :].copy(deep=True)  # Полностью скопировали таблицу
 
             # Назначаем названия колонок
+
             useful_data.columns = headers
 
             # Фиксируем пустые значения в колонке "Артикул"
@@ -96,15 +108,24 @@ def merge_excel_files():
             # Оставляем только требуемые колонки
             useful_data = useful_data[required_columns]
 
+            useful_data["Номер заказа"] = unit
+
             # Добавляем полученный DataFrame в список результатов
             df_list.append(useful_data)
 
         # Объединение всех собранных таблиц
         merged_df = pd.concat(df_list)
 
-        # Суммирование по материалам
-        grouped_df = merged_df.groupby(['Артикул', 'Наименование материала', 'Ед. изм.'])[
-            'Количество в заказе'].sum().reset_index()
+        merged_df['Номер заказа'] = merged_df['Номер заказа'].astype(str)
+        merged_df['Артикул'] = merged_df['Артикул'].astype(str)
+
+        grouped_df = merged_df.groupby('Наименование материала').agg({
+            'Номер заказа': lambda x: ', '.join(x.unique()),
+            'Артикул': lambda x: ', '.join(x.unique()),
+            'Наименование материала': 'first',
+            'Ед. изм.': 'first',
+            'Количество в заказе': 'sum'
+        })
 
         # Путь для сохранения итогового файла
         output_path = os.path.join(os.getcwd(), 'Сводный заказ.xlsx')
