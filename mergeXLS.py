@@ -7,6 +7,7 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 
 pd.set_option('future.no_silent_downcasting', True)
 
+list_of_non_materials = ['Материалы', 'Фурнитура на монтаж', 'Фурнитура']
 list_of_furniture = ['петля', 'направляющие', 'планка', 'заглушка', 'комплект', 'замок']
 list_of_LKM = ['ral', 'ncs', 'отвердитель', 'разбавитель', 'грунт', 'лак', 'эмаль', 'порошковая', 'краска']
 list_of_mirror = ['стекло', 'зеркало']
@@ -92,11 +93,9 @@ def merge_excel_files():
             # Заменяем единицы измерения если ячейка пустая
             useful_data["Ед. изм."] = useful_data["Ед. изм."].fillna("н/а")
 
-            # Определяем колонки для проверки на пустоту (без учета "Артикул")
-            # check_columns = [col for col in required_columns if (col != "Артикул")]
-
-            # Исключение строк с пустыми значениями в колонках check_columns
-            # useful_data.dropna(how="any", subset=check_columns, inplace=True)
+            # Исключение строк со значениями из списка-фильтра
+            useless_rows_mask = useful_data['Наименование материала'].isin(list_of_non_materials)
+            useful_data = useful_data[~useless_rows_mask].reset_index(drop=True)
 
             # Оставляем только требуемые колонки
             useful_data = useful_data[required_columns]
