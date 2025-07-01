@@ -15,13 +15,6 @@ list_of_wood = ['лдсп', 'акрил', 'кромка', 'мдф', 'фанер�
 
 
 # Функция для объединения файлов Excel
-def fill_column(new_units, val):
-
-    if val not in new_units:
-        new_units.append(val)
-    return ' '.join(new_units)
-
-
 def merge_excel_files():
     global unit
     units = []
