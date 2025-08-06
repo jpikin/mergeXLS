@@ -167,16 +167,106 @@ def merge_excel_files():
         result_text.insert('end', f'Ошибка: {e}')
 
 
-def sys_message():
+def merge_merged_files():
+    file_paths = filedialog.askopenfilenames(
+        title="Выберите файлы Excel",
+        filetypes=(("Excel files", "*.xlsx"), ("All files", "*.*"))
+    )
+
+    if not file_paths:
+        print("Файлы не выбраны.")
+        return None
+
+    # Чтение всех выбранных файлов и обработка данных
+    df_list = []
+    for path in file_paths:
+        try:
+            df = pd.read_excel(path, skiprows=3)  # Пропускаем первые три строки
+
+            # Проверяем наличие нужных столбцов
+            required_columns = ['Номер заказа', 'Артикул', 'Наименование материала', 'Ед. изм.', 'Количество в заказе']
+            missing_cols = set(required_columns).difference(df.columns)
+            if len(missing_cols):
+                raise ValueError(f"В файле {path} отсутствуют необходимые столбцы: {missing_cols}")
+
+            # Преобразуем количество в числовой формат
+            df['Количество в заказе'] = pd.to_numeric(df['Количество в заказе'], errors='coerce')
+
+            # Удаляем дублирующиеся строки по артикулу и наименованию материала
+            df.drop_duplicates(subset=['Артикул', 'Наименование материала'], inplace=True)
+
+            df_list.append(df)
+        except Exception as e:
+            result_text.delete('1.0', 'end')
+            result_text.insert('end', f"Произошла ошибка при обработке файла. {e}")
+
+    # Объединение всех полученных таблиц
+    merged_df = pd.concat(df_list, ignore_index=True)
+
+    merged_df['Номер заказа'] = merged_df['Номер заказа'].astype(str)
+    merged_df['Артикул'] = merged_df['Артикул'].astype(str)
+    merged_df['Артикул'] = merged_df['Артикул'].fillna(" ")
+
+    grouped_df = merged_df.groupby('Наименование материала').agg({
+        'Номер заказа': lambda x: ', '.join(set(x)),
+        'Артикул': lambda x: ', '.join(x.unique()),
+        'Наименование материала': 'first',
+        'Ед. изм.': 'first',
+        'Количество в заказе': 'sum'
+    })
+
+    # Создаем красную заливку для условного форматирования
+    red_fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")  # Цвет светло-красный
+
+    # Сохраняем результат в новый Excel-файл
+    output_path = os.path.join(os.getcwd(), 'Объединенный файл.xlsx')
+    if not output_path:
+        result_text.delete('1.0', 'end')
+        result_text.insert('end', f"Не получилось сохранить файл")
+        return None
+
+    workbook = Workbook()
+    sheet = workbook.active
+
+    # Запись заголовков
+    headers = list(grouped_df.columns)
+    for col_num, header in enumerate(headers, start=1):
+        cell = sheet.cell(row=1, column=col_num)
+        cell.value = header
+
+    # Добавляем таблицу в лист
+    rows = dataframe_to_rows(grouped_df, index=False, header=False)
+    for row_idx, row in enumerate(rows, start=2):
+        for col_idx, value in enumerate(row, start=1):
+            cell = sheet.cell(row=row_idx, column=col_idx)
+            cell.value = value
+
+        # Получаем наименование материала и количество текущего ряда
+        material_name = str(
+            sheet.cell(row=row_idx, column=grouped_df.columns.get_loc('Наименование материала') + 1).value)
+        quantity = float(sheet.cell(row=row_idx, column=grouped_df.columns.get_loc('Количество в заказе') + 1).value)
+        unit_measure = str(sheet.cell(row=row_idx, column=grouped_df.columns.get_loc('Ед. изм.') + 1).value)
+
+        # Проверка на красные строки
+        if (
+                material_name.strip() in list_of_non_materials or  # Название материала входит в чёрный список
+                quantity <= 0 or  # Количество меньше или равно нулю
+                unit_measure.lower().strip() == "н/а"  # Единица измерения отсутствует
+        ):
+            for cell in sheet[row_idx]:
+                cell.fill = red_fill
+
+    workbook.save(output_path)
+
     result_text.delete('1.0', 'end')
-    result_text.insert('end', "Функция еще не работает")
+    result_text.insert('end', f"Создание объединённого файла успешно завершилось! Файл сохранён в '{output_path}'")
 
 
 root = Tk()
 root.title("Объединение Excel-файлов")
 
 select_button = Button(root, text="Выбрать файлы", command=merge_excel_files)
-select_orders = Button(root, text="Выбрать заказы", command=sys_message)
+select_orders = Button(root, text="Выбрать заказы", command=merge_merged_files)
 select_button.pack(pady=10)
 select_orders.pack(pady=10)
 
