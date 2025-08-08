@@ -218,7 +218,7 @@ def merge_merged_files():
         'Наименование материала': 'first',
         'Ед. изм.': 'first',
         'Количество в заказе': 'sum',
-        'Примечание' : lambda x: ', '.join(x.unique())
+        'Примечание': lambda x: ', '.join(x.unique())
     })
 
     # Создаем красную заливку для условного форматирования
@@ -268,8 +268,6 @@ def merge_merged_files():
     except Exception as e:
         result_text.delete('1.0', 'end')
         result_text.insert('end', f"Ошибка доступа к файлу {e}")
-
-
 
 
 root = Tk()
