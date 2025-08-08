@@ -66,7 +66,7 @@ def merge_excel_files():
             headers = df.iloc[start_row_idx].values.tolist()
 
             # Проверка наличия нужных колонок
-            required_columns = ["Артикул", "Наименование материала", "Ед. изм.", "Количество в заказе"]
+            required_columns = ["Артикул", "Наименование материала", "Ед. изм.", "Количество в заказе", "Примечание"]
             missing_cols = set(required_columns) - set(headers)
             if missing_cols:
                 raise Exception(f"В файле '{path}' не хватает колонок: {missing_cols}")
@@ -84,6 +84,7 @@ def merge_excel_files():
 
             # Фиксируем пустые значения в колонке "Артикул"
             useful_data["Артикул"] = useful_data["Артикул"].fillna(" ")
+            useful_data["Примечание"] = useful_data["Примечание"].fillna(" ")
 
             # Заменяем пустые значения в колонке "Количество в заказе" на 0
             temp_col = useful_data["Количество в заказе"].fillna(0)
@@ -116,7 +117,8 @@ def merge_excel_files():
             'Артикул': lambda x: ', '.join(x.unique()),
             'Наименование материала': 'first',
             'Ед. изм.': 'first',
-            'Количество в заказе': 'sum'
+            'Количество в заказе': 'sum',
+            'Примечание': lambda x: ', '.join(x.unique())
         })
 
         # Путь для сохранения итогового файла
@@ -174,7 +176,8 @@ def merge_merged_files():
     )
 
     if not file_paths:
-        print("Файлы не выбраны.")
+        result_text.delete('1.0', 'end')
+        result_text.insert('end', f"Файлы не выбраны")
         return None
 
     # Чтение всех выбранных файлов и обработка данных
@@ -184,7 +187,8 @@ def merge_merged_files():
             df = pd.read_excel(path, skiprows=3)  # Пропускаем первые три строки
 
             # Проверяем наличие нужных столбцов
-            required_columns = ['Номер заказа', 'Артикул', 'Наименование материала', 'Ед. изм.', 'Количество в заказе']
+            required_columns = ['Номер заказа', 'Артикул', 'Наименование материала',
+                                'Ед. изм.', 'Количество в заказе', 'Примечание']
             missing_cols = set(required_columns).difference(df.columns)
             if len(missing_cols):
                 raise ValueError(f"В файле {path} отсутствуют необходимые столбцы: {missing_cols}")
@@ -204,15 +208,17 @@ def merge_merged_files():
     merged_df = pd.concat(df_list, ignore_index=True)
 
     merged_df['Номер заказа'] = merged_df['Номер заказа'].astype(str)
-    merged_df['Артикул'] = merged_df['Артикул'].astype(str)
     merged_df['Артикул'] = merged_df['Артикул'].fillna(" ")
+    merged_df['Артикул'] = merged_df['Артикул'].astype(str)
+    merged_df['Примечание'] = merged_df['Примечание'].fillna(" ")
 
     grouped_df = merged_df.groupby('Наименование материала').agg({
-        'Номер заказа': lambda x: ', '.join(set(x)),
+        'Номер заказа': lambda x: ', '.join(sorted(set(', '.join(x).split(', ')))),
         'Артикул': lambda x: ', '.join(x.unique()),
         'Наименование материала': 'first',
         'Ед. изм.': 'first',
-        'Количество в заказе': 'sum'
+        'Количество в заказе': 'sum',
+        'Примечание' : lambda x: ', '.join(x.unique())
     })
 
     # Создаем красную заливку для условного форматирования
@@ -255,11 +261,15 @@ def merge_merged_files():
         ):
             for cell in sheet[row_idx]:
                 cell.fill = red_fill
+    try:
+        workbook.save(output_path)
+        result_text.delete('1.0', 'end')
+        result_text.insert('end', f"Создание объединённого файла успешно завершилось! Файл сохранён в '{output_path}'")
+    except Exception as e:
+        result_text.delete('1.0', 'end')
+        result_text.insert('end', f"Ошибка доступа к файлу {e}")
 
-    workbook.save(output_path)
 
-    result_text.delete('1.0', 'end')
-    result_text.insert('end', f"Создание объединённого файла успешно завершилось! Файл сохранён в '{output_path}'")
 
 
 root = Tk()
